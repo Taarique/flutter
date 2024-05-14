@@ -198,7 +198,8 @@ DartRecordType* DartTypeDb::FindOrAdd(dart::RecordTypePtr recordTypePtr)
 	const auto& recordType = dart::RecordType::Handle(zone, recordTypePtr);
 
 	std::vector<std::string> fieldNames;
-	const auto& field_names = dart::Array::Handle(zone, recordType.GetFieldNames(thread));
+	// from 3.0.0-30.0.dev to 3.0.0-51.0.dev dart used field_names() instead of GetFieldNames(thread)
+	const auto& field_names = dart::Array::Handle(zone, recordType.field_names());
 	auto& name = dart::String::Handle(zone);
 	for (intptr_t i = 0; i < field_names.Length(); i++) {
 		name ^= field_names.At(i);
