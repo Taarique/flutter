@@ -46,13 +46,17 @@ std::string FnParamInfo::ToString() const
 	}
 	if (valReg.IsSet() || localOffset) {
 		txt += " /* ";
+		if (paramReg.IsSet()) {
+			txt += paramReg.Name();
+			txt += " => ";
+		}
 		if (valReg.IsSet()) {
 			txt += valReg.Name();
 			if (localOffset)
 				txt += ", ";
 		}
 		if (localOffset)
-			txt += std::format("fp-{:#x}", -localOffset);
+			txt += fmt::format("fp-{:#x}", -localOffset);
 		txt += " */";
 	}
 	return txt;
