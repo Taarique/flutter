@@ -162,7 +162,6 @@ def find_compat_macro(dart_version: str, no_analysis: bool, ida_fcn: bool):
             # https://github.com/dart-lang/sdk/commit/84fd647969f0d74ab63f0994d95b5fc26cac006a
             macros.append("-DDEV_3_6=1")
 
-    print(macros)
     return macros
 
 
