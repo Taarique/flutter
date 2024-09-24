@@ -592,9 +592,15 @@ std::string DartDumper::ObjectToString(dart::Object& obj, bool simpleForm, bool 
 			return fmt::format("{:#x}", dart::Smi::Cast(obj).Value());
 		return fmt::format("Smi: {:#x}", dart::Smi::Cast(obj).Value());
 	case dart::kMintCid:
-		if (simpleForm || depth > 0)
-			return fmt::format("{:#x}", dart::Mint::Cast(obj).value());
-		return fmt::format("Mint: {:#x}", dart::Mint::Cast(obj).value());
+		#ifdef DEV_3_6
+			if (simpleForm || depth > 0)
+				return fmt::format("{:#x}", dart::Mint::Cast(obj).Value());
+			return fmt::format("Mint: {:#x}", dart::Mint::Cast(obj).Value());
+		#else
+			if (simpleForm || depth > 0)
+				return fmt::format("{:#x}", dart::Mint::Cast(obj).value());
+			return fmt::format("Mint: {:#x}", dart::Mint::Cast(obj).value());
+		#endif
 	case dart::kDoubleCid:
 		if (simpleForm || depth > 0)
 			return fmt::format("{}", dart::Double::Cast(obj).value());

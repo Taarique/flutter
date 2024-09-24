@@ -80,7 +80,11 @@ static VarValue* getPoolObject(DartApp& app, intptr_t offset, A64::Register dstR
 		case dart::kSmiCid:
 			return new VarInteger(dart::Smi::Cast(obj).Value(), dart::kSmiCid);
 		case dart::kMintCid:
-			return new VarInteger(dart::Mint::Cast(obj).AsInt64Value(), dart::kMintCid);
+			#ifdef DEV_3_6
+				return new VarInteger(dart::Mint::Cast(obj).Value(), dart::kMintCid);
+			#else
+				return new VarInteger(dart::Mint::Cast(obj).AsInt64Value(), dart::kMintCid);
+			#endif
 		case dart::kDoubleCid:
 			return new VarDouble(dart::Double::Cast(obj).value());
 		case dart::kBoolCid:

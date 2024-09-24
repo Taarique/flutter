@@ -154,6 +154,15 @@ def find_compat_macro(dart_version: str, no_analysis: bool, ida_fcn: bool):
                 # [vm] marking_stack_block_offset() changes since Dart Stable 3.5.0
                 # https://github.com/worawit/blutter/issues/96#issue-2470674670
                 macros.append("-DOLD_MARKING_STACK_BLOCK=1")
+    
+    if dart_version.startswith("3.6") and dart_version.endswith(".dev"):
+        d_v = int( dart_version.split('-')[1:][0].split('.')[0])
+        if d_v >= 160:
+            # [vm] Refactor access to Integer value
+            # https://github.com/dart-lang/sdk/commit/84fd647969f0d74ab63f0994d95b5fc26cac006a
+            macros.append("-DDEV_3_6=1")
+
+    print(macros)
     return macros
 
 
