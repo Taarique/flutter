@@ -140,6 +140,15 @@ def find_compat_macro(dart_version: str, no_analysis: bool, ida_fcn: bool):
         if mm.find(b"build_generic_method_extractor_code)") == -1:
             macros.append("-DNO_METHOD_EXTRACTOR_STUB=1")
 
+    with open(os.path.join(vm_path, "object.h"), "rb") as f:
+        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        # [vm] Refactor access to Integer value
+        # https://github.com/dart-lang/sdk/commit/84fd647969f0d74ab63f0994d95b5fc26cac006a
+        # [vm] Changes to BitField API, in blutter this affects UntaggedObject class
+        # https://github.com/dart-lang/sdk/commit/d3c165d7b52e48672224d0e46d2c74696fd89322
+        if mm.find(b"AsTruncatedUint32Value()") == -1:
+            macros.append("-DRM_SMINT=1")
+
     if no_analysis:
         macros.append("-DNO_CODE_ANALYSIS=1")
 

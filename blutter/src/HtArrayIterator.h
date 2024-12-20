@@ -7,7 +7,11 @@ public:
 
 	uint32_t Size() const {
 		const auto& num_used = dart::Smi::Cast(dart::Object::Handle(data.At(0)));
-		return (uint32_t)num_used.AsInt64Value();
+		#ifdef RM_SMINT
+			return (uint32_t)num_used.Value();
+		#else
+			return (uint32_t)num_used.AsInt64Value();
+		#endif
 	}
 
 	bool MoveNext() {

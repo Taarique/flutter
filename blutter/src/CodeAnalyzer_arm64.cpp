@@ -80,7 +80,11 @@ static VarValue* getPoolObject(DartApp& app, intptr_t offset, A64::Register dstR
 		case dart::kSmiCid:
 			return new VarInteger(dart::Smi::Cast(obj).Value(), dart::kSmiCid);
 		case dart::kMintCid:
-			return new VarInteger(dart::Mint::Cast(obj).AsInt64Value(), dart::kMintCid);
+			#ifdef RM_SMINT
+				return new VarInteger(dart::Mint::Cast(obj).Value(), dart::kMintCid);
+			#else
+				return new VarInteger(dart::Mint::Cast(obj).AsInt64Value(), dart::kMintCid);
+			#endif
 		case dart::kDoubleCid:
 			return new VarDouble(dart::Double::Cast(obj).value());
 		case dart::kBoolCid:
@@ -147,7 +151,7 @@ static VarValue* getPoolObject(DartApp& app, intptr_t offset, A64::Register dstR
 		case dart::kInt32x4Cid:
 		case dart::kFloat32x4Cid:
 		case dart::kFloat64x2Cid:
-			return new VarExpression(std::format("{}", obj.ToCString()), (int32_t)obj.GetClassId()); 
+			return new VarExpression(fmt::format("{}", obj.ToCString()), (int32_t)obj.GetClassId()); 
 		case dart::kLibraryPrefixCid:
 			// TODO: handle LibraryPrefix object
 		case dart::kInstanceCid:
@@ -2539,35 +2543,66 @@ std::unique_ptr<BranchIfSmiInstr> FunctionAnalyzer::processBranchIfSmiInstr(AsmI
 }
 
 std::unique_ptr<LoadClassIdInstr> FunctionAnalyzer::processLoadClassIdInstr(AsmIterator& insn)
-{
-	if (insn.id() == ARM64_INS_LDUR && insn.ops(1).mem.disp == -1 && dart::UntaggedObject::kClassIdTagPos == 12) {
-		// 0x21cb10: ldur  x1, [x0, #-1]  ; load object tag
-		const auto objReg = A64::Register{ insn.ops(1).mem.base };
-		const auto cidReg = insn.ops(0).reg;
-		const auto ins0_addr = insn.address();
-		++insn;
+{	
+	#ifdef RM_SMINT
+		if (insn.id() == ARM64_INS_LDUR && insn.ops(1).mem.disp == -1 && dart::UntaggedObject::ClassIdTag::shift() == 12) {
+			// 0x21cb10: ldur  x1, [x0, #-1]  ; load object tag
+			const auto objReg = A64::Register{ insn.ops(1).mem.base };
+			const auto cidReg = insn.ops(0).reg;
+			const auto ins0_addr = insn.address();
+			++insn;
 
-		// Assembler::ExtractClassIdFromTags()
-		// 0x21cb14: ubfx  x1, x1, #0xc, #0x14  ; extract object class id
-		INSN_ASSERT(insn.id() == ARM64_INS_UBFX);
-		INSN_ASSERT(insn.ops(0).reg == cidReg);
-		INSN_ASSERT(insn.ops(1).reg == cidReg);
-		INSN_ASSERT(insn.ops(2).imm == dart::UntaggedObject::kClassIdTagPos);
-		INSN_ASSERT(insn.ops(3).imm == dart::UntaggedObject::kClassIdTagSize);
-		++insn;
+			// Assembler::ExtractClassIdFromTags()
+			// 0x21cb14: ubfx  x1, x1, #0xc, #0x14  ; extract object class id
+			INSN_ASSERT(insn.id() == ARM64_INS_UBFX);
+			INSN_ASSERT(insn.ops(0).reg == cidReg);
+			INSN_ASSERT(insn.ops(1).reg == cidReg);
+			INSN_ASSERT(insn.ops(2).imm == dart::UntaggedObject::ClassIdTag::shift());
+			INSN_ASSERT(insn.ops(3).imm == dart::UntaggedObject::kClassIdTagSize);
+			++insn;
 
-		return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
-	}
-	else if (insn.id() == ARM64_INS_LDURH && insn.ops(1).mem.disp == 1 && dart::UntaggedObject::kClassIdTagPos == 16) {
-		// https://github.com/dart-lang/sdk/commit/9182d5e5359988703a2b8a88c238f47a5295e18c
-		// 0x5f3900: ldurh  w3, [x0, #1]
-		const auto objReg = A64::Register{ insn.ops(1).mem.base };
-		const auto cidReg = insn.ops(0).reg;
-		const auto ins0_addr = insn.address();
-		++insn;
+			return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
+		}
+		else if (insn.id() == ARM64_INS_LDURH && insn.ops(1).mem.disp == 1 && dart::UntaggedObject::ClassIdTag::shift() == 16) {
+			// https://github.com/dart-lang/sdk/commit/9182d5e5359988703a2b8a88c238f47a5295e18c
+			// 0x5f3900: ldurh  w3, [x0, #1]
+			const auto objReg = A64::Register{ insn.ops(1).mem.base };
+			const auto cidReg = insn.ops(0).reg;
+			const auto ins0_addr = insn.address();
+			++insn;
 
-		return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
-	}
+			return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
+		}
+	#else
+		if (insn.id() == ARM64_INS_LDUR && insn.ops(1).mem.disp == -1 && dart::UntaggedObject::kClassIdTagPos == 12) {
+			// 0x21cb10: ldur  x1, [x0, #-1]  ; load object tag
+			const auto objReg = A64::Register{ insn.ops(1).mem.base };
+			const auto cidReg = insn.ops(0).reg;
+			const auto ins0_addr = insn.address();
+			++insn;
+
+			// Assembler::ExtractClassIdFromTags()
+			// 0x21cb14: ubfx  x1, x1, #0xc, #0x14  ; extract object class id
+			INSN_ASSERT(insn.id() == ARM64_INS_UBFX);
+			INSN_ASSERT(insn.ops(0).reg == cidReg);
+			INSN_ASSERT(insn.ops(1).reg == cidReg);
+			INSN_ASSERT(insn.ops(2).imm == dart::UntaggedObject::kClassIdTagPos);
+			INSN_ASSERT(insn.ops(3).imm == dart::UntaggedObject::kClassIdTagSize);
+			++insn;
+
+			return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
+		}
+		else if (insn.id() == ARM64_INS_LDURH && insn.ops(1).mem.disp == 1 && dart::UntaggedObject::kClassIdTagPos == 16) {
+			// https://github.com/dart-lang/sdk/commit/9182d5e5359988703a2b8a88c238f47a5295e18c
+			// 0x5f3900: ldurh  w3, [x0, #1]
+			const auto objReg = A64::Register{ insn.ops(1).mem.base };
+			const auto cidReg = insn.ops(0).reg;
+			const auto ins0_addr = insn.address();
+			++insn;
+
+			return std::make_unique<LoadClassIdInstr>(insn.Wrap(ins0_addr), objReg, A64::Register{cidReg});
+		}
+	#endif
 	return nullptr;
 }
 
@@ -2965,7 +3000,11 @@ std::unique_ptr<AllocateObjectInstr> FunctionAnalyzer::processTryAllocateObject(
 		INSN_ASSERT(insn.ops(1).mem.base == inst_reg && insn.ops(1).mem.disp == -1); // because of kHeapObjectTag
 		++insn;
 
-		const uint32_t cid = (tag >> dart::UntaggedObject::kClassIdTagPos) & ((1 << dart::UntaggedObject::kClassIdTagSize) - 1);
+		#ifdef RM_SMINT
+			const uint32_t cid = (tag >> dart::UntaggedObject::ClassIdTag::shift()) & ((1 << dart::UntaggedObject::kClassIdTagSize) - 1);
+		#else
+			const uint32_t cid = (tag >> dart::UntaggedObject::kClassIdTagPos) & ((1 << dart::UntaggedObject::kClassIdTagSize) - 1);
+		#endif
 		auto dartCls = app.GetClass(cid);
 		//INSN_ASSERT(dartCls->Size() < 0 || dartCls->Size() == inst_size);
 
